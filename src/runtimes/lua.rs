@@ -277,8 +277,9 @@ impl Runtime for LuaRuntime {
             let func = ns
                 .get::<_, Function>(name)
                 .map_err(|e| ScriptingError::RuntimeError(Box::new(e)))?;
+            let mut args = args.parse(engine);
+            args.insert(0, LuaValue::new(engine, ns));
             let args = args
-                .parse(engine)
                 .into_iter()
                 .map(|a| engine.registry_value::<mlua::Value>(&a.0).unwrap());
             let result = func
