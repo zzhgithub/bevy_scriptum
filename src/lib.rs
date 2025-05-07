@@ -348,6 +348,15 @@ pub trait Runtime: Resource + Default {
         context: &Self::CallContext,
         args: Vec<Self::Value>,
     ) -> Result<Self::Value, ScriptingError>;
+
+
+    fn call_fn_with_ns(
+        &self,
+        name: &str,
+        script_data: &mut Self::ScriptData,
+        entity: Entity,
+        args: impl for<'a> FuncArgs<'a, Self::Value, Self>,
+    ) -> Result<Self::Value, ScriptingError>;
 }
 
 pub trait FuncArgs<'a, V, R: Runtime> {

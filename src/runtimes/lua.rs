@@ -1,11 +1,11 @@
 use bevy::{
     asset::Asset,
-    ecs::{component::Component, entity::Entity, schedule::ScheduleLabel, resource::Resource},
+    ecs::{component::Component, entity::Entity, resource::Resource, schedule::ScheduleLabel},
     math::Vec3,
     reflect::TypePath,
 };
 use mlua::{
-    FromLua, Function, IntoLua, IntoLuaMulti, Lua, RegistryKey, UserData, UserDataFields,
+    FromLua, Function, IntoLua, IntoLuaMulti, Lua, RegistryKey, Table, UserData, UserDataFields,
     UserDataMethods, Variadic,
 };
 use serde::Deserialize;
@@ -256,6 +256,40 @@ impl Runtime for LuaRuntime {
     fn with_engine<T>(&self, f: impl FnOnce(&Self::RawEngine) -> T) -> T {
         let engine = self.engine.lock().unwrap();
         f(&engine)
+    }
+
+    fn call_fn_with_ns(
+        &self,
+        name: &str,
+        script_data: &mut Self::ScriptData,
+        entity: Entity,
+        args: impl for<'a> FuncArgs<'a, Self::Value, Self>,
+    ) -> bevy::prelude::Result<Self::Value, ScriptingError> {
+        self.with_engine(|engine| {
+            engine
+                .globals()
+                .set(ENTITY_VAR_NAME, BevyEntity(entity))
+                .expect("Error setting entity global variable");
+            let ns: Table = engine
+                .globals()
+                .get(format!("entity_{}", entity.index()))
+                .unwrap();
+            let func = ns
+                .get::<_, Function>(name)
+                .map_err(|e| ScriptingError::RuntimeError(Box::new(e)))?;
+            let args = args
+                .parse(engine)
+                .into_iter()
+                .map(|a| engine.registry_value::<mlua::Value>(&a.0).unwrap());
+            let result = func
+                .call::<_, mlua::Value>(Variadic::from_iter(args))
+                .map_err(|e| ScriptingError::RuntimeError(Box::new(e)))?;
+            engine
+                .globals()
+                .set(ENTITY_VAR_NAME, mlua::Value::Nil)
+                .expect("Error clearing entity global variable");
+            Ok(LuaValue::new(engine, result))
+        })
     }
 }
 

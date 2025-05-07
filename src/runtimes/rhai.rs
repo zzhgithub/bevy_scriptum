@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use bevy::{
     asset::Asset,
-    ecs::{component::Component, entity::Entity, schedule::ScheduleLabel, resource::Resource},
+    ecs::{component::Component, entity::Entity, resource::Resource, schedule::ScheduleLabel},
     math::Vec3,
     reflect::TypePath,
 };
@@ -159,6 +159,16 @@ impl Runtime for RhaiRuntime {
 
     fn with_engine<T>(&self, f: impl FnOnce(&Self::RawEngine) -> T) -> T {
         f(&self.engine)
+    }
+
+    fn call_fn_with_ns(
+        &self,
+        name: &str,
+        script_data: &mut Self::ScriptData,
+        entity: Entity,
+        args: impl for<'a> FuncArgs<'a, Self::Value, Self>,
+    ) -> bevy::prelude::Result<Self::Value, ScriptingError> {
+        todo!()
     }
 }
 
